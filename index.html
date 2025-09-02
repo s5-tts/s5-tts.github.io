@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>S5-TTS</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet">
+    <link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/inter-ui@4.1.1/inter.css">
+    <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f5f6fa;
+      color: #333;
+    }
+    .paper-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #2c3e50;
+    }
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #2c3e50;
+    }
+    .card {
+      border-radius: 1rem;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: #ffffff;
+    }
+    audio {
+      width: 100%;
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 0.5rem;
+      text-align: center;
+      vertical-align: middle;
+      border-top: 1px solid #dee2e6;
+      word-wrap: break-word;
+    }
+    thead th {
+      background-color: #e9ecef;
+      color: #495057;
+      font-weight: 600;
+      border-bottom: 2px solid #dee2e6;
+    }
+    tbody tr {
+      transition: background-color 0.2s;
+      background: #fff;
+    }
+    tbody tr:nth-child(even):not(.collapse .target-text-row):not(.collapse .audio-row) {
+      background: #f8f9fa;
+    }
+    tbody tr:hover {
+      background-color: #e2e6ea;
+    }
+    .btn-show-more {
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      margin-top: 0.5rem;
+      padding: 0.5rem 1.2rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-show-more:hover {
+      background-color: #5a6268;
+      transform: translateY(-2px);
+    }
+    img.img-fluid {
+      max-height: 400px;
+      object-fit: contain;
+      border-radius: 0.5rem;
+    }
+    .target-text-row td {
+      text-align: left;
+      font-weight: 500;
+      background-color: #f1f3f5;
+      border-bottom: none;
+    }
+    .audio-row td {
+      text-align: center;
+      border-top: none;
+      background-color: #fff;
+    }
+    #table1-extra .target-text-row td {
+      background-color: #f1f3f5;
+    }
+    #table1-extra .audio-row td {
+      background-color: #fff;
+    }
+    .abstract-text {
+      text-align: justify;
+      text-justify: inter-word;
+    }
+  </style>
+  </head>
+  <body>
+    <div class="container py-5">
+      <div class="text-center mb-5">
+        <h1 class="paper-title">S5-TTS: Low-Latency Streaming T5-based
+          Text-to-Speech Synthesis with Minimal Lookahead</h1>
+      </div>
+
+      <h4 class="section-title">Abstract</h4>
+      <div class="card">
+        <p class="abstract-text">
+          Low-latency and natural text-to-speech (TTS) is crucial for
+          interactive AI systems, but most TTS models require full sentences
+          before synthesis, resulting in delayed responses. Existing incremental
+          TTS (iTTS) methods can reduce latency but have yet to leverage the
+          high naturalness and speaker diversity offered by LLM-based TTS. We
+          propose S5-TTS, a streaming variant of T5-TTS that enables
+          word-by-word
+          synthesis with minimal lookahead. S5-TTS incorporates a
+          lookahead-causal masking strategy for generating speech with high
+          intelligibility and speaker similarity, an auxiliary attention module
+          that facilitates mask construction and accelerates monotonic alignment
+          learning, and utilizes an interleaved multi-source distillation
+          approach to further restore naturalness and perceived quality under
+          limited lookahead. Experiments demonstrate that S5-TTS achieves
+          comparable naturalness and intelligibility to T5-TTS, with the
+          capability to perform zero-shot speech synthesis for unseen speakers,
+          while significantly reducing end-to-end speech response latency.
+        </p>
+      </div>
+
+      <h4 class="section-title">Model Overview</h4>
+
+      <div class="text-center mb-1">
+        <div class="card d-inline-block">
+          <img src="model_overview.gif" alt="Model Overview"
+            class="img-fluid rounded">
+        </div>
+      </div>
+
+      <h4 class="section-title">Audio Samples</h4>
+
+      <div class="card mb-5">
+        <h5 class="mb-3">Comparison of S5-TTS (Lookahead Words k=1,2,3), T5-TTS,
+          and Ground Truth on LibriTTS Test Set (Zero-Shot)</h5>
+        <p>Experimental results indicate that S5-TTS with a lookahead of two
+          words (k=2) strikes a balance between naturalness and
+          intelligibility.</p>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Reference Audio</th>
+              <th>S5-TTS (k=1)</th>
+              <th><b>S5-TTS (k=2)</b></th>
+              <th>S5-TTS (k=3)</th>
+              <th>T5-TTS</th>
+              <th>Ground Truth</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                And in this last action he falls into the classic sin of
+                Pride.<br /><b>Target Text:</b> Our baggage was immediately
+                carried to the deck of the frigate. I rushed aboard.</td></tr>
+            <tr class="audio-row"><td><audio controls><source
+                    src="audio_samples/libritts/refs/c936e34b-8b1c-43e8-b26a-cb953983db9c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la1/c936e34b-8b1c-43e8-b26a-cb953983db9c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la2/c936e34b-8b1c-43e8-b26a-cb953983db9c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la3/c936e34b-8b1c-43e8-b26a-cb953983db9c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/t5tts/c936e34b-8b1c-43e8-b26a-cb953983db9c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/gt/c936e34b-8b1c-43e8-b26a-cb953983db9c.wav"></audio></td></tr>
+            <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                Chris could catch the shine as lantern glow touched the silver
+                buckles on their shoes.<br /><b>Target Text:</b> We shall say no
+                more, but I trust you understand the responsibility you
+                have?</td></tr>
+            <tr class="audio-row"><td><audio controls><source
+                    src="audio_samples/libritts/refs/a283bd46-dbb4-49bd-8de5-760c67157092.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la1/a283bd46-dbb4-49bd-8de5-760c67157092.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la2/a283bd46-dbb4-49bd-8de5-760c67157092.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la3/a283bd46-dbb4-49bd-8de5-760c67157092.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/t5tts/a283bd46-dbb4-49bd-8de5-760c67157092.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/gt/a283bd46-dbb4-49bd-8de5-760c67157092.wav"></audio></td></tr>
+            <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                Alexander leaned forward and warmed his hands before the
+                blaze.<br /><b>Target Text:</b> Alexander walked about the room,
+                looking at everything.</td></tr>
+            <tr class="audio-row"><td><audio controls><source
+                    src="audio_samples/libritts/refs/46783d43-6151-4d4f-9742-dbbd5fe8a7de.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la1/46783d43-6151-4d4f-9742-dbbd5fe8a7de.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la2/46783d43-6151-4d4f-9742-dbbd5fe8a7de.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la3/46783d43-6151-4d4f-9742-dbbd5fe8a7de.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/t5tts/46783d43-6151-4d4f-9742-dbbd5fe8a7de.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/gt/46783d43-6151-4d4f-9742-dbbd5fe8a7de.wav"></audio></td></tr>
+            <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                In the meantime, the uplifted hand of Hawkeye was above
+                him.<br /><b>Target Text:</b> At last the scout spoke in
+                English, and at once explained the embarrassment of their
+                situation.</td></tr>
+            <tr class="audio-row"><td><audio controls><source
+                    src="audio_samples/libritts/refs/22fa0db5-1f8f-4349-97eb-1657f31e68ec.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la1/22fa0db5-1f8f-4349-97eb-1657f31e68ec.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la2/22fa0db5-1f8f-4349-97eb-1657f31e68ec.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la3/22fa0db5-1f8f-4349-97eb-1657f31e68ec.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/t5tts/22fa0db5-1f8f-4349-97eb-1657f31e68ec.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/gt/22fa0db5-1f8f-4349-97eb-1657f31e68ec.wav"></audio></td></tr>
+            <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                The combined bands of both the countries played the music and a
+                fine supper was served.<br /><b>Target Text:</b> The immense
+                blade was so heavy that it took the strength of seven Blueskins
+                to raise it.</td></tr>
+            <tr class="audio-row"><td><audio controls><source
+                    src="audio_samples/libritts/refs/96ee6462-5489-4859-b4cf-eb562ff2de6c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la1/96ee6462-5489-4859-b4cf-eb562ff2de6c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la2/96ee6462-5489-4859-b4cf-eb562ff2de6c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/s5tts_la3/96ee6462-5489-4859-b4cf-eb562ff2de6c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/t5tts/96ee6462-5489-4859-b4cf-eb562ff2de6c.wav"></audio></td><td><audio
+                  controls><source
+                    src="audio_samples/libritts/gt/96ee6462-5489-4859-b4cf-eb562ff2de6c.wav"></audio></td></tr>
+
+            <tbody id="table1-extra" class="collapse">
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  His father was the notorious Sir Jabez Gilchrist, who ruined
+                  himself on the turf.<br /><b>Target Text:</b> It was a small
+                  pyramid of black, putty like stuff, exactly like the one upon
+                  the table of the study.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/libritts/refs/9bcff9d7-23cf-4831-ae39-1e05862df020.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la1/9bcff9d7-23cf-4831-ae39-1e05862df020.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la2/9bcff9d7-23cf-4831-ae39-1e05862df020.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la3/9bcff9d7-23cf-4831-ae39-1e05862df020.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/t5tts/9bcff9d7-23cf-4831-ae39-1e05862df020.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/gt/9bcff9d7-23cf-4831-ae39-1e05862df020.wav"></audio></td></tr>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  The remainder of the sea monsters have
+                  disappeared.<br /><b>Target Text:</b> In the distance the
+                  clouds
+                  resemble great bales of cotton, piled up in picturesque
+                  disorder.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/libritts/refs/cdf31e5c-e60d-4111-b7cd-9da4c6260932.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la1/cdf31e5c-e60d-4111-b7cd-9da4c6260932.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la2/cdf31e5c-e60d-4111-b7cd-9da4c6260932.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la3/cdf31e5c-e60d-4111-b7cd-9da4c6260932.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/t5tts/cdf31e5c-e60d-4111-b7cd-9da4c6260932.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/gt/cdf31e5c-e60d-4111-b7cd-9da4c6260932.wav"></audio></td></tr>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  Their walk continued silent for the greater part, neither was
+                  quite satisfied with the other.<br /><b>Target Text:</b> Miss
+                  Rachel only glanced across her mufflers on his face.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/libritts/refs/9e63d0bc-ce22-4488-ba9c-9ba7fb723d82.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la1/9e63d0bc-ce22-4488-ba9c-9ba7fb723d82.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la2/9e63d0bc-ce22-4488-ba9c-9ba7fb723d82.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la3/9e63d0bc-ce22-4488-ba9c-9ba7fb723d82.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/t5tts/9e63d0bc-ce22-4488-ba9c-9ba7fb723d82.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/gt/9e63d0bc-ce22-4488-ba9c-9ba7fb723d82.wav"></audio></td></tr>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  The drag upon his beak and the light check upon his wings were
+                  inexplicable to him, and appalling.<br /><b>Target Text:</b>
+                  He
+                  saw the frantic fugitive dive over the ledge and
+                  disappear.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/libritts/refs/d3504ff7-4320-4457-9871-b93ee55fc8e1.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la1/d3504ff7-4320-4457-9871-b93ee55fc8e1.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la2/d3504ff7-4320-4457-9871-b93ee55fc8e1.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la3/d3504ff7-4320-4457-9871-b93ee55fc8e1.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/t5tts/d3504ff7-4320-4457-9871-b93ee55fc8e1.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/gt/d3504ff7-4320-4457-9871-b93ee55fc8e1.wav"></audio></td></tr>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  He looked up rather ungraciously, but motioned them to be
+                  seated.<br /><b>Target Text:</b> He was a round faced,
+                  respectable appearing fellow, but his mood was distinctly
+                  unsociable.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/libritts/refs/b215289d-722f-49e0-9c30-008ca080552f.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la1/b215289d-722f-49e0-9c30-008ca080552f.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la2/b215289d-722f-49e0-9c30-008ca080552f.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/s5tts_la3/b215289d-722f-49e0-9c30-008ca080552f.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/t5tts/b215289d-722f-49e0-9c30-008ca080552f.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/libritts/gt/b215289d-722f-49e0-9c30-008ca080552f.wav"></audio></td></tr>
+            </tbody>
+          </table>
+          <div class="text-center">
+            <button class="btn btn-secondary btn-show-more"
+              data-bs-toggle="collapse" data-bs-target="#table1-extra">Show
+              More</button>
+          </div>
+        </div>
+
+        <div class="card mb-5">
+          <h5 class="mb-3">Comparison of S5-TTS (Lookahead Words k=1,2,3),
+            T5-TTS, and Ground Truth on VCTK Corpus (Zero-Shot)</h5>
+          <p>Experimental results indicate that S5-TTS with a lookahead of two
+            words (k=2) strikes a balance between naturalness and
+            intelligibility.</p>
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Reference Audio</th>
+                <th>S5-TTS (k=1)</th>
+                <th><b>S5-TTS (k=2)</b></th>
+                <th>S5-TTS (k=3)</th>
+                <th>T5-TTS</th>
+                <th>Ground Truth</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  The Norsemen considered the rainbow as a bridge over which the
+                  gods passed from earth to their home in the
+                  sky.<br /><b>Target Text:</b> Six spoons of fresh snow peas,
+                  five thick slabs of blue cheese, and maybe a snack for her
+                  brother Bob.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/vctk/refs/01681db2-c572-4078-9675-140b62d36157.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la1/01681db2-c572-4078-9675-140b62d36157.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la2/01681db2-c572-4078-9675-140b62d36157.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la3/01681db2-c572-4078-9675-140b62d36157.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/t5tts/01681db2-c572-4078-9675-140b62d36157.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/gt/01681db2-c572-4078-9675-140b62d36157.wav"></audio></td></tr>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  This is a very common type of bow, one showing mainly red and
+                  yellow, with little or no green or blue.<br /><b>Target
+                    Text:</b> The Norsemen considered the rainbow as a bridge
+                  over which the gods passed from earth to their home in the
+                  sky.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/vctk/refs/e90c796d-d3db-4551-91ca-19dcf67bac68.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la1/e90c796d-d3db-4551-91ca-19dcf67bac68.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la2/e90c796d-d3db-4551-91ca-19dcf67bac68.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la3/e90c796d-d3db-4551-91ca-19dcf67bac68.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/t5tts/e90c796d-d3db-4551-91ca-19dcf67bac68.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/gt/e90c796d-d3db-4551-91ca-19dcf67bac68.wav"></audio></td></tr>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  Health Secretary Frank Dobson made the surprise announcement
+                  in the Commons yesterday.<br /><b>Target Text:</b> Jim
+                  Wallace, the justice minister, acknowledged that prisoner
+                  numbers were a concern.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/vctk/refs/073835e5-acd9-44ec-9350-c384fb01b570.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la1/073835e5-acd9-44ec-9350-c384fb01b570.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la2/073835e5-acd9-44ec-9350-c384fb01b570.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la3/073835e5-acd9-44ec-9350-c384fb01b570.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/t5tts/073835e5-acd9-44ec-9350-c384fb01b570.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/gt/073835e5-acd9-44ec-9350-c384fb01b570.wav"></audio></td></tr>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  Six spoons of fresh snow peas, five thick slabs of blue
+                  cheese, and maybe a snack for her brother Bob.<br /><b>Target
+                    Text:</b> The actual primary rainbow observed is said to be
+                  the effect of super-imposition of a number of bows.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/vctk/refs/a31a4e83-fbf6-4b05-b18c-6c7afd2b7014.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la1/a31a4e83-fbf6-4b05-b18c-6c7afd2b7014.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la2/a31a4e83-fbf6-4b05-b18c-6c7afd2b7014.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la3/a31a4e83-fbf6-4b05-b18c-6c7afd2b7014.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/t5tts/a31a4e83-fbf6-4b05-b18c-6c7afd2b7014.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/gt/a31a4e83-fbf6-4b05-b18c-6c7afd2b7014.wav"></audio></td></tr>
+              <tr class="target-text-row"><td colspan="6"><b>Reference Text:</b>
+                  The Greeks used to imagine that it was a sign from the gods to
+                  foretell war or heavy rain.<br /><b>Target Text:</b> This is a
+                  very common type of bow, one showing mainly red and yellow,
+                  with little or no green or blue.</td></tr>
+              <tr class="audio-row"><td><audio controls><source
+                      src="audio_samples/vctk/refs/e7985865-91fa-4b78-b028-d23baabc5467.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la1/e7985865-91fa-4b78-b028-d23baabc5467.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la2/e7985865-91fa-4b78-b028-d23baabc5467.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/s5tts_la3/e7985865-91fa-4b78-b028-d23baabc5467.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/t5tts/e7985865-91fa-4b78-b028-d23baabc5467.wav"></audio></td><td><audio
+                    controls><source
+                      src="audio_samples/vctk/gt/e7985865-91fa-4b78-b028-d23baabc5467.wav"></audio></td></tr>
+
+              <tbody id="table2-extra" class="collapse">
+                <tr class="target-text-row"><td colspan="6"><b>Reference
+                      Text:</b> When a man looks for something beyond his reach,
+                    his friends say he is looking for the pot of gold at the end
+                    of the rainbow.<br /><b>Target Text:</b> She can scoop these
+                    things into three red bags, and we will go meet her
+                    Wednesday at the train station.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/vctk/refs/a418aec3-8308-4389-9f10-22cd7156dbf1.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la1/a418aec3-8308-4389-9f10-22cd7156dbf1.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la2/a418aec3-8308-4389-9f10-22cd7156dbf1.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la3/a418aec3-8308-4389-9f10-22cd7156dbf1.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/t5tts/a418aec3-8308-4389-9f10-22cd7156dbf1.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/gt/a418aec3-8308-4389-9f10-22cd7156dbf1.wav"></audio></td></tr>
+                <tr class="target-text-row"><td colspan="6"><b>Reference
+                      Text:</b> The important retail business continues to
+                    deliver excellent results, Stewart said.<br /><b>Target
+                      Text:</b> The company hopes to top seven million
+                    passengers in its current financial year.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/vctk/refs/78a6b7a8-dea3-4c49-a6f7-8b838bf090c0.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la1/78a6b7a8-dea3-4c49-a6f7-8b838bf090c0.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la2/78a6b7a8-dea3-4c49-a6f7-8b838bf090c0.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la3/78a6b7a8-dea3-4c49-a6f7-8b838bf090c0.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/t5tts/78a6b7a8-dea3-4c49-a6f7-8b838bf090c0.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/gt/78a6b7a8-dea3-4c49-a6f7-8b838bf090c0.wav"></audio></td></tr>
+                <tr class="target-text-row"><td colspan="6"><b>Reference
+                      Text:</b> The Norsemen considered the rainbow as a bridge
+                    over which the gods passed from earth to their home in the
+                    sky.<br /><b>Target Text:</b> These take the shape of a long
+                    round arch, with its path high above, and its two ends
+                    apparently beyond the horizon.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/vctk/refs/8e1be71e-a0bc-4b1a-871b-cf57b21aa768.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la1/8e1be71e-a0bc-4b1a-871b-cf57b21aa768.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la2/8e1be71e-a0bc-4b1a-871b-cf57b21aa768.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la3/8e1be71e-a0bc-4b1a-871b-cf57b21aa768.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/t5tts/8e1be71e-a0bc-4b1a-871b-cf57b21aa768.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/gt/8e1be71e-a0bc-4b1a-871b-cf57b21aa768.wav"></audio></td></tr>
+                <tr class="target-text-row"><td colspan="6"><b>Reference
+                      Text:</b> The actual primary rainbow observed is said to
+                    be the effect of super-imposition of a number of
+                    bows.<br /><b>Target Text:</b> That capital would be
+                    provided equally by the State and established commercial
+                    companies.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/vctk/refs/57324be9-413e-4429-9033-598c50d6917b.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la1/57324be9-413e-4429-9033-598c50d6917b.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la2/57324be9-413e-4429-9033-598c50d6917b.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la3/57324be9-413e-4429-9033-598c50d6917b.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/t5tts/57324be9-413e-4429-9033-598c50d6917b.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/gt/57324be9-413e-4429-9033-598c50d6917b.wav"></audio></td></tr>
+                <tr class="target-text-row"><td colspan="6"><b>Reference
+                      Text:</b> Jim Wallace, the justice minister, acknowledged
+                    that prisoner numbers were a concern.<br /><b>Target
+                      Text:</b> When a man looks for something beyond his reach,
+                    his friends say he is looking for the pot of gold at the end
+                    of the rainbow.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/vctk/refs/61c2bdb3-e672-4d16-84ef-6f75fc2e3076.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la1/61c2bdb3-e672-4d16-84ef-6f75fc2e3076.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la2/61c2bdb3-e672-4d16-84ef-6f75fc2e3076.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/s5tts_la3/61c2bdb3-e672-4d16-84ef-6f75fc2e3076.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/t5tts/61c2bdb3-e672-4d16-84ef-6f75fc2e3076.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/vctk/gt/61c2bdb3-e672-4d16-84ef-6f75fc2e3076.wav"></audio></td></tr>
+
+              </tbody>
+            </table>
+            <div class="text-center">
+              <button class="btn btn-secondary btn-show-more"
+                data-bs-toggle="collapse" data-bs-target="#table2-extra">Show
+                More</button>
+            </div>
+          </div>
+
+          <div class="card mb-5">
+            <h5 class="mb-3">Comparison of S5-TTS-D (distilled), S5-TTS, T5-TTS,
+              and Ground Truth on LibriTTS Test Set (Zero-Shot)</h5>
+            <p>Experimental results show that knowledge distillation can
+              effectively improve the naturalness of S5-TTS, achieving quality
+              comparable to T5-TTS.</p>
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Reference Audio</th>
+                  <th>S5-TTS (k=2)</th>
+                  <th><b>S5-TTS-D (k=2)</b></th>
+                  <th>T5-TTS</th>
+                  <th>Ground Truth</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="target-text-row"><td colspan="5"><b>Reference
+                      Text:</b> In the drawing room, after dinner, their
+                    nervousness and awkwardness increased.<br /><b>Target
+                      Text:</b> mrs peter broke off in some confusion, and
+                    tripped out to meet her husband in the hall.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/libritts_distilled/refs/422b6dc9-54fd-43a8-a319-29845e33bc54.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2/422b6dc9-54fd-43a8-a319-29845e33bc54.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2_distilled/422b6dc9-54fd-43a8-a319-29845e33bc54.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/t5tts/422b6dc9-54fd-43a8-a319-29845e33bc54.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/gt/422b6dc9-54fd-43a8-a319-29845e33bc54.wav"></audio></td></tr>
+                <tr class="target-text-row"><td colspan="5"><b>Reference
+                      Text:</b> When he saw her coming, he stopped and wiped his
+                    brow.<br /><b>Target Text:</b> Telephone wires hum along the
+                    white roads, which always run at right angles.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/libritts_distilled/refs/23a59850-08a3-478b-8136-9977c817c62d.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2/23a59850-08a3-478b-8136-9977c817c62d.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2_distilled/23a59850-08a3-478b-8136-9977c817c62d.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/t5tts/23a59850-08a3-478b-8136-9977c817c62d.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/gt/23a59850-08a3-478b-8136-9977c817c62d.wav"></audio></td></tr>
+                <tr class="target-text-row"><td colspan="5"><b>Reference
+                      Text:</b> Hilda was writing in her living room, under the
+                    light of a tall desk lamp.<br /><b>Target Text:</b> Marie
+                    opened the door and smilingly announced that dinner was
+                    served.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/libritts_distilled/refs/fdfed928-e0e9-42f7-b26a-61558f1f1665.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2/fdfed928-e0e9-42f7-b26a-61558f1f1665.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2_distilled/fdfed928-e0e9-42f7-b26a-61558f1f1665.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/t5tts/fdfed928-e0e9-42f7-b26a-61558f1f1665.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/gt/fdfed928-e0e9-42f7-b26a-61558f1f1665.wav"></audio></td></tr>
+                <tr class="target-text-row"><td colspan="5"><b>Reference
+                      Text:</b> The combined bands of both the countries played
+                    the music and a fine supper was served.<br /><b>Target
+                      Text:</b> The immense blade was so heavy that it took the
+                    strength of seven Blueskins to raise it.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/libritts_distilled/refs/0b01ff05-a893-4029-83d2-f9111eb8cc5c.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2/0b01ff05-a893-4029-83d2-f9111eb8cc5c.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2_distilled/0b01ff05-a893-4029-83d2-f9111eb8cc5c.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/t5tts/0b01ff05-a893-4029-83d2-f9111eb8cc5c.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/gt/0b01ff05-a893-4029-83d2-f9111eb8cc5c.wav"></audio></td></tr>
+                <tr class="target-text-row"><td colspan="5"><b>Reference
+                      Text:</b> Yet the deep marks of conical teeth upon the
+                    iron pick are certainly those of the
+                    crocodile.<br /><b>Target Text:</b> I take this as my
+                    answer, and I leave the Professor to bite his lips with
+                    impatience.</td></tr>
+                <tr class="audio-row"><td><audio controls><source
+                        src="audio_samples/libritts_distilled/refs/3dd3ca23-9ba6-49b5-b41e-2acf48cbc39c.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2/3dd3ca23-9ba6-49b5-b41e-2acf48cbc39c.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/s5tts_la2_distilled/3dd3ca23-9ba6-49b5-b41e-2acf48cbc39c.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/t5tts/3dd3ca23-9ba6-49b5-b41e-2acf48cbc39c.wav"></audio></td><td><audio
+                      controls><source
+                        src="audio_samples/libritts_distilled/gt/3dd3ca23-9ba6-49b5-b41e-2acf48cbc39c.wav"></audio></td></tr>
+
+                <tbody id="table3-extra" class="collapse">
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> Why, if we erect a station at the falls, it is
+                      a great economy to get it up to the city.<br /><b>Target
+                        Text:</b> A model of this station is preserved in the
+                      Deutschen Museum at Munich.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/libritts_distilled/refs/efd3330c-5409-46b6-8c76-5a3236338393.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2/efd3330c-5409-46b6-8c76-5a3236338393.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2_distilled/efd3330c-5409-46b6-8c76-5a3236338393.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/t5tts/efd3330c-5409-46b6-8c76-5a3236338393.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/gt/efd3330c-5409-46b6-8c76-5a3236338393.wav"></audio></td></tr>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> If these articles of consumption are costly,
+                      they are felt to be noble and honorific.<br /><b>Target
+                        Text:</b> The salient features of this development of
+                      domestic service have already been indicated.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/libritts_distilled/refs/d26ed9be-b303-4be1-a83e-963e76e0d62e.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2/d26ed9be-b303-4be1-a83e-963e76e0d62e.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2_distilled/d26ed9be-b303-4be1-a83e-963e76e0d62e.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/t5tts/d26ed9be-b303-4be1-a83e-963e76e0d62e.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/gt/d26ed9be-b303-4be1-a83e-963e76e0d62e.wav"></audio></td></tr>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> Gordon went down the passage to the end of the
+                      hall, in the direction Murdoch had
+                      indicated.<br /><b>Target Text:</b> At one time, there had
+                      been a small dome and a tiny city devoted to the rocket
+                      field.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/libritts_distilled/refs/3cfa53ca-5150-43fb-afd7-0fd4f511ff43.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2/3cfa53ca-5150-43fb-afd7-0fd4f511ff43.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2_distilled/3cfa53ca-5150-43fb-afd7-0fd4f511ff43.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/t5tts/3cfa53ca-5150-43fb-afd7-0fd4f511ff43.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/gt/3cfa53ca-5150-43fb-afd7-0fd4f511ff43.wav"></audio></td></tr>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> An appeal was made to the executive of the
+                      state, but little encouragement was
+                      returned.<br /><b>Target Text:</b> Let us observe the
+                      contrast between the beginning and the present proportions
+                      of the Church.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/libritts_distilled/refs/d2581a14-7f90-47d3-b171-24f420864083.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2/d2581a14-7f90-47d3-b171-24f420864083.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2_distilled/d2581a14-7f90-47d3-b171-24f420864083.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/t5tts/d2581a14-7f90-47d3-b171-24f420864083.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/gt/d2581a14-7f90-47d3-b171-24f420864083.wav"></audio></td></tr>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> In the Little Convent there was a centenarian
+                      who came from the Abbey of Fontevrault.<br /><b>Target
+                        Text:</b> Fontaines in Burgundy is a country that is
+                      blest because it gave him birth.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/libritts_distilled/refs/728b18de-082a-44a2-a878-da374b8d3678.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2/728b18de-082a-44a2-a878-da374b8d3678.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/s5tts_la2_distilled/728b18de-082a-44a2-a878-da374b8d3678.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/t5tts/728b18de-082a-44a2-a878-da374b8d3678.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/libritts_distilled/gt/728b18de-082a-44a2-a878-da374b8d3678.wav"></audio></td></tr>
+
+                </tbody>
+              </table>
+              <div class="text-center">
+                <button class="btn btn-secondary btn-show-more"
+                  data-bs-toggle="collapse" data-bs-target="#table3-extra">Show
+                  More</button>
+              </div>
+            </div>
+
+            <div class="card mb-5">
+              <h5 class="mb-3">Comparison of S5-TTS-D (distilled), S5-TTS, and
+                T5-TTS on UltraChat Test Texts (Zero-Shot)</h5>
+              <p>Experimental results show that knowledge distillation can
+                effectively improve the naturalness of S5-TTS, achieving quality
+                comparable to T5-TTS.</p>
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Reference Audio</th>
+                    <th>S5-TTS (k=2)</th>
+                    <th><b>S5-TTS-D (k=2)</b></th>
+                    <th>T5-TTS</th>
+                    <th>Ground Truth</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> I’m an assistant here to help with questions,
+                      provide information, and support you in various
+                      tasks.<br /><b>Target Text:</b> Focus your attention on
+                      your breath and keep your core muscles tight.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/ultrachat_distilled/refs/cce1733d-d334-48b3-9aa3-6023dc2d9324.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2/cce1733d-d334-48b3-9aa3-6023dc2d9324.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/cce1733d-d334-48b3-9aa3-6023dc2d9324.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/t5tts/cce1733d-d334-48b3-9aa3-6023dc2d9324.wav"></audio></td><td>N/A</td></tr>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> I’m an assistant here to help with questions,
+                      provide information, and support you in various
+                      tasks.<br /><b>Target Text:</b> Ensure that the sculpture
+                      depicts their essence and captures their spirit, making it
+                      easy for anyone who sees it to identify the
+                      person.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/ultrachat_distilled/refs/ba9f851a-ba22-4d2e-abd5-4cd148bbb762.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2/ba9f851a-ba22-4d2e-abd5-4cd148bbb762.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/ba9f851a-ba22-4d2e-abd5-4cd148bbb762.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/t5tts/ba9f851a-ba22-4d2e-abd5-4cd148bbb762.wav"></audio></td><td>N/A</td></tr>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> I’m an assistant here to help with questions,
+                      provide information, and support you in various
+                      tasks.<br /><b>Target Text:</b> Christmas Eve is also a
+                      birthday party for our daughter.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/ultrachat_distilled/refs/21bc1128-ad0a-49d2-b55a-1e4523858c4c.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2/21bc1128-ad0a-49d2-b55a-1e4523858c4c.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/21bc1128-ad0a-49d2-b55a-1e4523858c4c.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/t5tts/21bc1128-ad0a-49d2-b55a-1e4523858c4c.wav"></audio></td><td>N/A</td></tr>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> I’m an assistant here to help with questions,
+                      provide information, and support you in various
+                      tasks.<br /><b>Target Text:</b> Thanks for the helpful
+                      tips on how emergency personnel can protect their
+                      hearing.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/ultrachat_distilled/refs/4648cede-c446-46b3-adda-2b49ab60c44d.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2/4648cede-c446-46b3-adda-2b49ab60c44d.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/4648cede-c446-46b3-adda-2b49ab60c44d.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/t5tts/4648cede-c446-46b3-adda-2b49ab60c44d.wav"></audio></td><td>N/A</td></tr>
+                  <tr class="target-text-row"><td colspan="5"><b>Reference
+                        Text:</b> I’m an assistant here to help with questions,
+                      provide information, and support you in various
+                      tasks.<br /><b>Target Text:</b> This helped me to focus on
+                      the positives in my life and to appreciate them
+                      more.</td></tr>
+                  <tr class="audio-row"><td><audio controls><source
+                          src="audio_samples/ultrachat_distilled/refs/2ba4db2f-38ec-4f29-89e5-c54f4ed1a7b3.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2/2ba4db2f-38ec-4f29-89e5-c54f4ed1a7b3.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/2ba4db2f-38ec-4f29-89e5-c54f4ed1a7b3.wav"></audio></td><td><audio
+                        controls><source
+                          src="audio_samples/ultrachat_distilled/t5tts/2ba4db2f-38ec-4f29-89e5-c54f4ed1a7b3.wav"></audio></td><td>N/A</td></tr>
+
+                  <tbody id="table4-extra" class="collapse">
+                    <tr class="target-text-row"><td colspan="5"><b>Reference
+                          Text:</b> I’m an assistant here to help with
+                        questions, provide information, and support you in
+                        various tasks.<br /><b>Target Text:</b> He puts on his
+                        backpack and trudges off, wistfully wishing things could
+                        be different for him.</td></tr>
+                    <tr class="audio-row"><td><audio controls><source
+                            src="audio_samples/ultrachat_distilled/refs/14c6319e-376b-4eac-bda7-1f6969941b77.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2/14c6319e-376b-4eac-bda7-1f6969941b77.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/14c6319e-376b-4eac-bda7-1f6969941b77.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/t5tts/14c6319e-376b-4eac-bda7-1f6969941b77.wav"></audio></td><td>N/A</td></tr>
+                    <tr class="target-text-row"><td colspan="5"><b>Reference
+                          Text:</b> I’m an assistant here to help with
+                        questions, provide information, and support you in
+                        various tasks.<br /><b>Target Text:</b> You can attend
+                        these events from the comfort of your own home and still
+                        experience different cultures.</td></tr>
+                    <tr class="audio-row"><td><audio controls><source
+                            src="audio_samples/ultrachat_distilled/refs/7b284d44-c27b-4566-b601-228c9638310e.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2/7b284d44-c27b-4566-b601-228c9638310e.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/7b284d44-c27b-4566-b601-228c9638310e.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/t5tts/7b284d44-c27b-4566-b601-228c9638310e.wav"></audio></td><td>N/A</td></tr>
+                    <tr class="target-text-row"><td colspan="5"><b>Reference
+                          Text:</b> I’m an assistant here to help with
+                        questions, provide information, and support you in
+                        various tasks.<br /><b>Target Text:</b> They kissed
+                        under the stars, and Brooke felt like she was exactly
+                        where she was meant to be.</td></tr>
+                    <tr class="audio-row"><td><audio controls><source
+                            src="audio_samples/ultrachat_distilled/refs/cf8b2808-a3cf-4685-bb8f-68352bda07bf.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2/cf8b2808-a3cf-4685-bb8f-68352bda07bf.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/cf8b2808-a3cf-4685-bb8f-68352bda07bf.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/t5tts/cf8b2808-a3cf-4685-bb8f-68352bda07bf.wav"></audio></td><td>N/A</td></tr>
+                    <tr class="target-text-row"><td colspan="5"><b>Reference
+                          Text:</b> I’m an assistant here to help with
+                        questions, provide information, and support you in
+                        various tasks.<br /><b>Target Text:</b> One of the most
+                        recognizable patterns used in Moroccan rugs is the
+                        diamond shape, which is also known as a
+                        lozenge.</td></tr>
+                    <tr class="audio-row"><td><audio controls><source
+                            src="audio_samples/ultrachat_distilled/refs/ca99ef5e-f4a7-4d3f-bf70-2af405a1ad59.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2/ca99ef5e-f4a7-4d3f-bf70-2af405a1ad59.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/ca99ef5e-f4a7-4d3f-bf70-2af405a1ad59.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/t5tts/ca99ef5e-f4a7-4d3f-bf70-2af405a1ad59.wav"></audio></td><td>N/A</td></tr>
+                    <tr class="target-text-row"><td colspan="5"><b>Reference
+                          Text:</b> I’m an assistant here to help with
+                        questions, provide information, and support you in
+                        various tasks.<br /><b>Target Text:</b> Imagine a world
+                        where people can teleport objects with their
+                        minds.</td></tr>
+                    <tr class="audio-row"><td><audio controls><source
+                            src="audio_samples/ultrachat_distilled/refs/b42f7e2e-8fce-43e5-b85b-6771ae3459e2.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2/b42f7e2e-8fce-43e5-b85b-6771ae3459e2.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/s5tts_la2_distilled/b42f7e2e-8fce-43e5-b85b-6771ae3459e2.wav"></audio></td><td><audio
+                          controls><source
+                            src="audio_samples/ultrachat_distilled/t5tts/b42f7e2e-8fce-43e5-b85b-6771ae3459e2.wav"></audio></td><td>N/A</td></tr>
+
+                  </tbody>
+                </table>
+                <div class="text-center">
+                  <button class="btn btn-secondary btn-show-more"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#table4-extra">Show
+                    More</button>
+                </div>
+              </div>
+
+            </div>
+            <script
+              src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <script>
+              document.querySelectorAll('.btn-show-more').forEach(button => {
+                const targetId = button.getAttribute('data-bs-target');
+                const collapseElement = document.querySelector(targetId);
+
+
+                collapseElement.addEventListener('shown.bs.collapse', () => { button.innerText = 'Hide'; });
+                collapseElement.addEventListener('hidden.bs.collapse', () => { button.innerText = 'Show More'; });
+              });
+            </script>
+          </body>
+        </html>
