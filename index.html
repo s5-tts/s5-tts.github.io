@@ -121,22 +121,23 @@
       <div class="card">
         <p class="abstract-text">
           Low-latency and natural text-to-speech (TTS) is crucial for
-          interactive AI systems, but most TTS models require full sentences
-          before synthesis, resulting in delayed responses. Existing incremental
-          TTS (iTTS) methods can reduce latency but have yet to leverage the
-          high naturalness and speaker diversity offered by LLM-based TTS. We
-          propose S5-TTS, a streaming variant of T5-TTS that enables
-          word-by-word
-          synthesis with minimal lookahead. S5-TTS incorporates a
-          lookahead-causal masking strategy for generating speech with high
-          intelligibility and speaker similarity, an auxiliary attention module
-          that facilitates mask construction and accelerates monotonic alignment
-          learning, and utilizes an interleaved multi-source distillation
-          approach to further restore naturalness and perceived quality under
-          limited lookahead. Experiments demonstrate that S5-TTS achieves
-          comparable naturalness and intelligibility to T5-TTS, with the
-          capability to perform zero-shot speech synthesis for unseen speakers,
-          while significantly reducing end-to-end speech response latency.
+          interactive AI systems, yet most TTS models still require full
+          sentences before synthesis, causing delayed responses. Existing
+          incremental TTS (iTTS) methods can reduce latency but have yet to
+          leverage the high naturalness and speaker diversity offered by
+          LLM-based TTS. We propose S5-TTS, a <b>S</b>treaming variant of
+          T<b>5</b>-TTS that
+          enables word-by-word incremental synthesis with minimal lookahead.
+          S5-TTS incorporates a novel lookahead-causal masking strategy for
+          generating speech with high intelligibility and speaker similarity, an
+          auxiliary attention module that facilitates lookahead-causal mask
+          construction and accelerates monotonic alignment learning, and an
+          interleaved multi-source distillation approach to further restore
+          naturalness and perceived quality under limited lookahead. Experiments
+          demonstrate that S5-TTS achieves naturalness and intelligibility
+          comparable to T5-TTS, generalizes to unseen speakers in zero-shot
+          synthesis, and significantly reduces end-to-end speech response
+          latency.
         </p>
       </div>
 
