@@ -120,24 +120,23 @@
       <h4 class="section-title">Abstract</h4>
       <div class="card">
         <p class="abstract-text">
-          Low-latency and natural text-to-speech (TTS) is crucial for
-          interactive AI systems, yet most TTS models still require full
-          sentences before synthesis, causing delayed responses. Existing
-          incremental TTS (iTTS) methods can reduce latency but have yet to
-          leverage the high naturalness and speaker diversity offered by
-          LLM-based TTS. We propose S5-TTS, a <b>S</b>treaming variant of
-          T<b>5</b>-TTS that
-          enables word-by-word incremental synthesis with minimal lookahead.
-          S5-TTS incorporates a novel lookahead-causal masking strategy for
-          generating speech with high intelligibility and speaker similarity, an
-          auxiliary attention module that facilitates lookahead-causal mask
-          construction and accelerates monotonic alignment learning, and an
-          interleaved multi-source distillation approach to further restore
-          naturalness and perceived quality under limited lookahead. Experiments
-          demonstrate that S5-TTS achieves naturalness and intelligibility
-          comparable to T5-TTS, generalizes to unseen speakers in zero-shot
-          synthesis, and significantly reduces end-to-end speech response
-          latency.
+          Streaming text-to-speech synthesis in cascaded LLM-TTS systems still
+          faces significant latency challenges, as most existing TTS models
+          require full context before initiating speech generation. We present
+          S5-TTS, a <b>S</b>treaming variant of T<b>5-TTS</b> that enables
+          low-latency, word-by-word incremental speech synthesis through
+          encoder-decoder language modeling and monotonic alignment learning.
+          S5-TTS can begin generating speech immediately after receiving the
+          first few words, substantially reducing response latency in streaming
+          LLM-TTS pipelines. To maintain quality under limited lookahead, we
+          introduce a lookahead-causal masking mechanism with Conv-based
+          auxiliary attention that preserves intelligibility and speaker
+          similarity, and employ an interleaved multi-source distillation
+          strategy to further restore speech naturalness. Experiments
+          demonstrate that S5-TTS achieves comparable quality to full-context
+          T5-TTS, supports zero-shot synthesis for unseen speakers with high
+          speaker similarity, and significantly reduces end-to-end latency,
+          advancing practical real-time conversational AI systems.
         </p>
       </div>
 
